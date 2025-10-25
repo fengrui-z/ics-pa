@@ -54,6 +54,18 @@ void reg_test() {
 }
 
 void isa_reg_display() {
+  // 循环打印 8 个通用寄存器
+  // R_EAX (0) 到 R_EDI (7)
+  for (int i = R_EAX; i <= R_EDI; i++) {
+    // regsl 数组在你的文件顶部已经定义
+    // cpu.gpr[i]._32 访问第 i 个 GPR 的 32 位值 (例如 cpu.eax)
+    printf("%s: 0x%-10x  ", regsl[i], cpu.gpr[i]._32);
+    
+    // 每 4 个寄存器换一行
+    if ((i + 1) % 4 == 0) {
+      printf("\n");
+    }
+  printf("pc : 0x%-10x\n", cpu.pc);
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {

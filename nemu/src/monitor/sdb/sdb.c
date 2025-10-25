@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include <memory/paddr.h>
 
 static int is_batch_mode = false;
 
@@ -54,6 +55,77 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args) {
+  char *arg = strtok(NULL, " ");
+  int n = 1; // default step
+  if (arg != NULL) {
+    sscanf(arg, "%d", &n);
+  }
+  cpu_exec(n);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    printf("Usage: info r (registers) or info w (watchpoints)\n");
+    return 0;
+  }
+
+  if (strcmp(arg, "r") == 0) {
+    // 调用 ISA 相关的函数打印寄存器
+    isa_reg_display();
+  }
+  else if (strcmp(arg, "w") == 0) {
+    // 监视点功能将在 1.6 节实现
+    printf("Watchpoint functionality is not implemented yet.\n");
+  }
+  else {
+    printf("Unknown subcommand for 'info': %s\n", arg);
+  }
+
+  return 0;
+}
+
+
+static int cmd_x(char *args) {
+  char *arg1 = strtok(NULL, " ");
+  char *arg2 = strtok(NULL, " ");
+
+  if (arg1 == NULL || arg2 == NULL) {
+    printf("Usage: x N EXPR\n");
+    return 0;
+  }
+
+  int n = 0;
+  paddr_t start_addr = 0;
+
+  // 1. 解析 N
+  sscanf(arg1, "%d", &n);
+
+  // 2. 解析 EXPR (暂时只支持十六进制地址)
+  sscanf(arg2, "%x", &start_addr);
+
+  // 3. 循环读取和打印内存
+  printf("Memory scan from 0x%x:\n", start_addr);
+  for (int i = 0; i < n; i++) {
+    // 检查地址是否越界
+   /* if (!in_paddr(start_addr + i * 4)) {
+        printf("Address 0x%x is out of bounds\n", start_addr + i * 4);
+        break;
+    }
+	*/
+    // paddr_read(addr, len) 从物理地址 addr 读取 len 字节
+    uint32_t data = paddr_read(start_addr + i * 4, 4);
+
+    // 打印地址和数据 (每行打印一个4字节)
+    printf("0x%08x: 0x%08x\n", start_addr + i * 4, data);
+  }
+
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -64,7 +136,9 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
-
+  { "si", "si [N] - Step execute N instructions (default 1)", cmd_si },
+  { "info", "info r - Print register status; info w - Print watchpoint info", cmd_info },
+  { "x", "x N EXPR - Scan memory from EXPR for N * 4 bytes", cmd_x },
 };
 
 #define NR_CMD ARRLEN(cmd_table)
